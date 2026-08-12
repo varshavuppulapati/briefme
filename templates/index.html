@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BriefMe — Meeting &amp; Lecture Summarizer</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>BriefMe</h1>
+  <p>Paste a transcript or upload audio. Get a TL;DR, key points, action items, and decisions.</p>
+</header>
+
+<main>
+  <form method="post" action="/summarize" enctype="multipart/form-data">
+    <label for="transcript">Transcript</label>
+    <textarea id="transcript" name="transcript" rows="10" placeholder="Paste a meeting or lecture transcript here...">{{ transcript or '' }}</textarea>
+
+    <label for="audio">...or upload audio</label>
+    <input type="file" id="audio" name="audio" accept="audio/*">
+
+    <button type="submit">Summarize</button>
+  </form>
+
+  {% if error %}
+  <div class="alert">{{ error }}</div>
+  {% endif %}
+
+  {% if summary %}
+  <section class="results">
+    <h2>TL;DR</h2>
+    <p class="tldr">{{ summary.tldr }}</p>
+
+    <h2>Key points</h2>
+    {% if summary.key_points %}
+    <ul>{% for p in summary.key_points %}<li>{{ p }}</li>{% endfor %}</ul>
+    {% else %}<p class="mut">None captured.</p>{% endif %}
+
+    <h2>Action items</h2>
+    {% if summary.action_items %}
+    <ul class="actions">
+      {% for a in summary.action_items %}<li><b>{{ a.owner }}</b> — {{ a.task }}</li>{% endfor %}
+    </ul>
+    {% else %}<p class="mut">None mentioned.</p>{% endif %}
+
+    <h2>Decisions made</h2>
+    {% if summary.decisions %}
+    <ul>{% for d in summary.decisions %}<li>{{ d }}</li>{% endfor %}</ul>
+    {% else %}<p class="mut">None mentioned.</p>{% endif %}
+  </section>
+  {% endif %}
+</main>
+</body>
+</html>

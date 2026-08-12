@@ -1,6 +1,6 @@
 # BriefMe
 
-Paste a transcript or upload an audio file, and BriefMe turns it into structured notes: a TL;DR, key points, action items (with owner, if one was mentioned), and decisions made. No more re-reading forty minutes of rambling to find the three things that actually mattered.
+Paste a transcript or upload an audio file, and BriefMe turns it into structured notes: a TL;DR, key points, action items, and decisions made. No more re-reading forty minutes of rambling to find the three things that actually mattered.
 
 ## How it works
 

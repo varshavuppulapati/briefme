@@ -1,13 +1,15 @@
-import os
-import tempfile
+from core.setup import ensure_api_key, ensure_dependencies
 
-from dotenv import load_dotenv
-from flask import Flask, render_template, request
+ensure_dependencies()
+ensure_api_key()
 
-from core.summarizer import summarize_transcript
-from core.transcription import transcribe_audio
+import os  # noqa: E402
+import tempfile  # noqa: E402
 
-load_dotenv()
+from flask import Flask, render_template, request  # noqa: E402
+
+from core.summarizer import summarize_transcript  # noqa: E402
+from core.transcription import transcribe_audio  # noqa: E402
 
 app = Flask(__name__)
 

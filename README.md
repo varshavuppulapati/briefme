@@ -12,12 +12,10 @@ Paste a transcript or upload an audio file, and BriefMe turns it into structured
 ```bash
 git clone https://github.com/varshavuppulapati/briefme.git
 cd briefme
-python -m venv .venv
-source .venv/bin/activate  # .venv\Scripts\activate on Windows
-pip install -r requirements.txt
-cp .env.example .env       # then add your OPENAI_API_KEY
 python app.py
 ```
+
+That's it — no venv, no `pip install`, no `.env` to hand-edit first. The first run installs any missing dependencies automatically and asks for your OpenAI API key once ([get one here](https://platform.openai.com/api-keys)), then saves it to a local `.env` so you're never asked again.
 
 Open http://localhost:5002, paste a transcript or upload an audio file, and hit **Summarize**.
 
@@ -25,12 +23,13 @@ Open http://localhost:5002, paste a transcript or upload an audio file, and hit 
 
 ```
 briefme/
-├── app.py                    # Flask routes
+├── app.py                    # Flask routes + startup bootstrap
 ├── core/
-│   ├── llm.py                 # OpenAI client wrapper
-│   ├── prompts.py             # Prompt templates
-│   ├── transcription.py       # Whisper audio transcription
-│   └── summarizer.py          # Structured summary extraction
+│   ├── setup.py                # Auto-installs deps, prompts + saves API key on first run
+│   ├── llm.py                  # OpenAI client wrapper
+│   ├── prompts.py              # Prompt templates
+│   ├── transcription.py        # Whisper audio transcription
+│   └── summarizer.py           # Structured summary extraction
 ├── templates/index.html
 ├── static/style.css
 ├── tests/test_summarizer.py

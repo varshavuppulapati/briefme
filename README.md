@@ -4,7 +4,7 @@
 
 Paste a transcript, upload a recording, or record right in the browser. Get back a TL;DR, key points, action items, and decisions — no more re-watching an hour to find the three things that actually mattered.
 
-*(Free-tier hosting: the first load after a few idle minutes takes 30–50 seconds to wake up.)*
+
 
 ## Features
 

@@ -2,14 +2,28 @@
 
 **[Try it live →](https://briefme-pp0o.onrender.com)**
 
-Paste a transcript, or upload an audio or video recording of a meeting or lecture. Get back a TL;DR, key points, action items, and decisions — no more re-watching an hour to find the three things that actually mattered.
+Paste a transcript, upload a recording, or record right in the browser. Get back a TL;DR, key points, action items, and decisions — no more re-watching an hour to find the three things that actually mattered.
 
 *(Free-tier hosting: the first load after a few idle minutes takes 30–50 seconds to wake up.)*
 
+## Features
+
+- **Record in-browser** — capture straight from your mic, no upload step needed
+- **Upload audio or video** — mp3, wav, m4a, mp4, webm, flac, ogg, opus
+- **Draggable corkboard** — decisions, action items, and key points as pinned cards you can rearrange freely
+- **Mind-map view** — the same results as a draggable node graph radiating from a central "Meeting" node
+- **Clickable timeline scrubber** — a draggable playhead over the actual transcript segments, synced to an in-browser player
+- **Due-date parsing** — action items pick up dates or phrases like "by Friday" automatically, with checkboxes
+- **Meeting health score** — a signal-density gauge ("Highly decisive meeting" vs. "Could've been an email")
+- **Multi-language input** — Whisper auto-detects the spoken language; the summary always comes back in English
+- **Markdown export** — one click, copies formatted notes ready to paste into Notion/Slack
+- Mouse-reactive glow, drifting background, a draggable floating score badge, a reactive mood orb, and confetti on results — because meeting notes don't have to look like a form
+
 ## How it works
 
-1. **Transcribe** (optional) — if you upload audio or video instead of pasting text, Groq's hosted Whisper API transcribes it first.
-2. **Summarize** — a single structured-output LLM call extracts a TL;DR, key points, action items, and decisions as JSON, with an explicit instruction not to invent action items or decisions that weren't actually mentioned.
+1. **Transcribe** (optional) — if you upload or record audio/video instead of pasting text, Groq's hosted Whisper API transcribes it first, with segment-level timestamps for the scrubber and transcript view.
+2. **Summarize** — a single structured-output LLM call extracts a TL;DR, key points, action items (with owner and due date if mentioned), and decisions as JSON, with an explicit instruction not to invent anything that wasn't actually said.
+3. **Score** — a deterministic heuristic turns decisions + action items, relative to transcript length, into a "meeting health" signal-density score.
 
 ## Run it yourself
 
@@ -38,11 +52,11 @@ briefme/
 │   ├── setup.py                # Auto-installs deps, prompts + saves API key on first run
 │   ├── llm.py                  # Groq (OpenAI-compatible) client wrapper
 │   ├── prompts.py              # Prompt templates
-│   ├── transcription.py        # Whisper audio/video transcription (via Groq)
-│   └── summarizer.py           # Structured summary extraction
+│   ├── transcription.py        # Whisper audio/video transcription with timestamps
+│   └── summarizer.py           # Structured summary extraction + health score
 ├── templates/index.html
-├── static/{style.css, app.js}  # Drag-and-drop upload, tabs, animated results
-├── tests/test_summarizer.py
+├── static/{style.css, app.js}  # Corkboard, mind map, scrubber, mic recording, animations
+├── tests/
 ├── requirements.txt
 ├── render.yaml
 └── .env.example

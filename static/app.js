@@ -10,16 +10,36 @@
   const fileInput = document.getElementById("media_file");
   const ALLOWED_EXT = [".flac", ".mp3", ".mp4", ".mpeg", ".mpga", ".m4a", ".ogg", ".opus", ".wav", ".webm"];
 
-  let currentMediaFile = null; // whichever File is currently queued for upload (drop or recording)
+  let currentMediaFile = null;
   let lastSummary = null;
 
-  /* ---------- tabs ---------- */
-  document.querySelectorAll(".tab").forEach((tab) => {
+  /* ---------- mouse-follow glow ---------- */
+  document.addEventListener("mousemove", (e) => {
+    document.documentElement.style.setProperty("--mx", e.clientX + "px");
+    document.documentElement.style.setProperty("--my", e.clientY + "px");
+  });
+
+  /* ---------- tabs (input source) ---------- */
+  document.querySelectorAll(".tabs .tab").forEach((tab) => {
     tab.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("hidden"));
+      const group = tab.closest(".tabs");
+      group.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
-      document.querySelector(`.tab-panel[data-panel="${tab.dataset.tab}"]`).classList.remove("hidden");
+      if (tab.dataset.tab) {
+        document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("hidden"));
+        document.querySelector(`.tab-panel[data-panel="${tab.dataset.tab}"]`).classList.remove("hidden");
+      }
+    });
+  });
+
+  /* ---------- results view toggle ---------- */
+  document.querySelectorAll(".view-toggle .tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".view-toggle .tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      document.querySelectorAll(".view-panel").forEach((p) => p.classList.add("hidden"));
+      document.querySelector(`.view-panel[data-view-panel="${tab.dataset.view}"]`).classList.remove("hidden");
+      if (tab.dataset.view === "mindmap") requestAnimationFrame(() => window.__drawMindmapLines && window.__drawMindmapLines());
     });
   });
 
@@ -28,7 +48,6 @@
     const i = name.lastIndexOf(".");
     return i === -1 ? "" : name.slice(i).toLowerCase();
   }
-
   function handleFile(file) {
     if (!file) return;
     if (!ALLOWED_EXT.includes(extOf(file.name))) {
@@ -39,18 +58,11 @@
     dropzoneText.textContent = file.name;
     currentMediaFile = file;
   }
-
   ["dragenter", "dragover"].forEach((evt) =>
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      dropzone.classList.add("dragover");
-    })
+    dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add("dragover"); })
   );
   ["dragleave", "drop"].forEach((evt) =>
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      dropzone.classList.remove("dragover");
-    })
+    dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove("dragover"); })
   );
   dropzone.addEventListener("drop", (e) => {
     if (e.dataTransfer.files[0]) {
@@ -114,7 +126,7 @@
 
   /* ---------- steps ---------- */
   function setStep(n) {
-    document.querySelectorAll(".step").forEach((s) => {
+    document.querySelectorAll(".steps .step").forEach((s) => {
       const step = parseInt(s.dataset.step, 10);
       s.classList.toggle("active", step === n);
       s.classList.toggle("done", step < n);
@@ -125,7 +137,6 @@
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorBox.classList.add("hidden");
-    results.classList.add("hidden");
     setLoading(true);
     setStep(2);
 
@@ -150,10 +161,14 @@
     btnLabel.classList.toggle("hidden", isLoading);
     spinner.classList.toggle("hidden", !isLoading);
   }
-
   function showError(message) {
     errorBox.textContent = message;
     errorBox.classList.remove("hidden");
+  }
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str == null ? "" : String(str);
+    return div.innerHTML;
   }
 
   /* ---------- results ---------- */
@@ -161,48 +176,178 @@
     const summary = data.summary;
 
     animateHealth(summary.health.score, summary.health.label);
+    updateFloatingBadge(summary.health.score);
+    updateMoodOrb(summary.health);
     document.getElementById("tldr").textContent = summary.tldr || "—";
 
-    fillCards(document.getElementById("decisions"), summary.decisions, (d) => `<p>${escapeHtml(d)}</p>`, "No decisions captured.");
-    fillCards(
-      document.getElementById("action-items"),
-      summary.action_items,
-      (a) => `
-        <label class="action-item">
-          <input type="checkbox">
-          <span><b>${escapeHtml(a.owner || "Unspecified")}</b> — ${escapeHtml(a.task)}${a.due ? `<span class="due">${escapeHtml(a.due)}</span>` : ""}</span>
-        </label>`,
-      "No action items mentioned."
-    );
-    fillCards(document.getElementById("key-points"), summary.key_points, (p) => `<p>${escapeHtml(p)}</p>`, "None captured.");
-
+    renderCorkboard(summary);
+    renderMindmap(summary);
+    renderScrubber(data.segments);
     renderTranscript(data.transcript, data.segments);
 
     results.classList.remove("hidden");
     results.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function fillCards(container, items, template, emptyText) {
-    container.innerHTML = "";
-    if (!items || !items.length) {
-      container.innerHTML = `<p class="mut">${emptyText}</p>`;
+  /* ---------- draggable helper (container-relative) ---------- */
+  function makeCardDraggable(el, onMove) {
+    let dragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
+    const start = (x, y) => {
+      dragging = true;
+      startX = x; startY = y;
+      origLeft = el.offsetLeft; origTop = el.offsetTop;
+      el.classList.add("dragging");
+      el.style.zIndex = 50;
+    };
+    const move = (x, y) => {
+      if (!dragging) return;
+      el.style.left = origLeft + (x - startX) + "px";
+      el.style.top = origTop + (y - startY) + "px";
+      if (onMove) onMove();
+    };
+    const end = () => {
+      dragging = false;
+      el.classList.remove("dragging");
+      el.style.zIndex = "";
+    };
+    el.addEventListener("mousedown", (e) => { start(e.clientX, e.clientY); e.preventDefault(); });
+    window.addEventListener("mousemove", (e) => move(e.clientX, e.clientY));
+    window.addEventListener("mouseup", end);
+    el.addEventListener("touchstart", (e) => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    window.addEventListener("touchmove", (e) => move(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    window.addEventListener("touchend", end);
+  }
+
+  function summaryItems(summary) {
+    return [
+      ...(summary.decisions || []).map((d) => ({ type: "decision", text: d })),
+      ...(summary.action_items || []).map((a) => ({
+        type: "action",
+        text: `${a.owner || "Unspecified"} — ${a.task}${a.due ? ` (${a.due})` : ""}`,
+      })),
+      ...(summary.key_points || []).map((p) => ({ type: "point", text: p })),
+    ];
+  }
+
+  /* ---------- corkboard ---------- */
+  function renderCorkboard(summary) {
+    const board = document.getElementById("corkboard");
+    board.innerHTML = "";
+    const items = summaryItems(summary);
+    if (!items.length) {
+      board.innerHTML = '<p class="mut">Nothing captured to pin up.</p>';
       return;
     }
-    items.forEach((item) => {
+    const cols = 3;
+    items.forEach((item, i) => {
       const card = document.createElement("div");
-      card.className = "board-card";
-      card.innerHTML = template(item);
-      container.appendChild(card);
+      card.className = `cork-card cork-${item.type}`;
+      card.textContent = item.text;
+      const col = i % cols, row = Math.floor(i / cols);
+      card.style.left = 16 + col * 220 + (Math.random() * 16 - 8) + "px";
+      card.style.top = 16 + row * 110 + (Math.random() * 16 - 8) + "px";
+      card.style.setProperty("--tilt", Math.random() * 6 - 3 + "deg");
+      board.appendChild(card);
+      makeCardDraggable(card);
     });
+    board.style.minHeight = Math.max(40 + Math.ceil(items.length / cols) * 110, 220) + "px";
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str == null ? "" : String(str);
-    return div.innerHTML;
+  /* ---------- mind map ---------- */
+  function renderMindmap(summary) {
+    const container = document.getElementById("mindmap");
+    const svg = document.getElementById("mindmap-lines");
+    container.querySelectorAll(".mm-node:not(.mm-center)").forEach((n) => n.remove());
+
+    const items = summaryItems(summary);
+    const cx = container.clientWidth / 2 || 200;
+    const cy = container.clientHeight / 2 || 200;
+    const radius = Math.max(Math.min(cx, cy) - 70, 60);
+    const n = items.length || 1;
+    const nodes = [];
+
+    items.forEach((item, i) => {
+      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
+      const node = document.createElement("div");
+      node.className = `mm-node mm-${item.type}`;
+      node.textContent = item.text.length > 56 ? item.text.slice(0, 53) + "…" : item.text;
+      node.title = item.text;
+      node.style.left = x + "px";
+      node.style.top = y + "px";
+      container.appendChild(node);
+      nodes.push(node);
+      makeCardDraggable(node, drawMindmapLines);
+    });
+
+    function drawMindmapLines() {
+      const center = document.getElementById("mm-center");
+      const containerRect = container.getBoundingClientRect();
+      const cRect = center.getBoundingClientRect();
+      const ccx = cRect.left + cRect.width / 2 - containerRect.left;
+      const ccy = cRect.top + cRect.height / 2 - containerRect.top;
+      let html = "";
+      nodes.forEach((node) => {
+        const r = node.getBoundingClientRect();
+        const nx = r.left + r.width / 2 - containerRect.left;
+        const ny = r.top + r.height / 2 - containerRect.top;
+        html += `<line x1="${ccx}" y1="${ccy}" x2="${nx}" y2="${ny}" class="mm-line"/>`;
+      });
+      svg.innerHTML = html;
+    }
+    window.__drawMindmapLines = drawMindmapLines;
+    requestAnimationFrame(drawMindmapLines);
   }
 
-  /* ---------- transcript + player ---------- */
+  /* ---------- scrubber ---------- */
+  function renderScrubber(segments) {
+    const scrubber = document.getElementById("scrubber");
+    const track = document.getElementById("scrubber-track");
+    const playhead = document.getElementById("scrubber-playhead");
+    const player = document.getElementById("player");
+
+    if (!segments || !segments.length || !currentMediaFile) {
+      scrubber.classList.add("hidden");
+      return;
+    }
+    scrubber.classList.remove("hidden");
+    player.src = URL.createObjectURL(currentMediaFile);
+    player.classList.remove("hidden");
+
+    const duration = segments[segments.length - 1].end || 1;
+    track.querySelectorAll(".scrubber-tick").forEach((t) => t.remove());
+    segments.forEach((seg) => {
+      const tick = document.createElement("div");
+      tick.className = "scrubber-tick";
+      tick.style.left = (seg.start / duration) * 100 + "%";
+      tick.title = seg.text;
+      tick.addEventListener("click", (e) => {
+        e.stopPropagation();
+        player.currentTime = seg.start;
+        player.play();
+      });
+      track.appendChild(tick);
+    });
+
+    function seekFromEvent(e) {
+      const rect = track.getBoundingClientRect();
+      const frac = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+      player.currentTime = frac * duration;
+      playhead.style.left = frac * 100 + "%";
+    }
+    let draggingPlayhead = false;
+    playhead.onmousedown = () => (draggingPlayhead = true);
+    window.addEventListener("mousemove", (e) => { if (draggingPlayhead) seekFromEvent(e); });
+    window.addEventListener("mouseup", () => (draggingPlayhead = false));
+    track.onclick = seekFromEvent;
+    player.ontimeupdate = () => {
+      if (draggingPlayhead) return;
+      playhead.style.left = (player.currentTime / duration) * 100 + "%";
+    };
+  }
+
+  /* ---------- transcript ---------- */
   const toggleTranscriptBtn = document.getElementById("toggle-transcript-btn");
   const transcriptPanel = document.getElementById("transcript-panel");
   toggleTranscriptBtn.addEventListener("click", () => {
@@ -213,42 +358,19 @@
   });
 
   function renderTranscript(text, segments) {
-    const player = document.getElementById("player");
     const body = document.getElementById("transcript-body");
     body.innerHTML = "";
-
-    if (currentMediaFile) {
-      player.src = URL.createObjectURL(currentMediaFile);
-      player.classList.remove("hidden");
-    } else {
-      player.classList.add("hidden");
-    }
-
-    if (segments && segments.length && currentMediaFile) {
+    if (segments && segments.length) {
       segments.forEach((seg) => {
         const line = document.createElement("div");
         line.className = "transcript-line";
-        const time = document.createElement("button");
-        time.type = "button";
-        time.className = "transcript-time";
-        time.textContent = formatTime(seg.start);
-        time.addEventListener("click", () => {
-          player.currentTime = seg.start;
-          player.play();
-        });
-        const span = document.createElement("span");
-        span.textContent = seg.text;
-        line.appendChild(time);
-        line.appendChild(span);
+        line.innerHTML = `<span class="transcript-time-label">${formatTime(seg.start)}</span><span>${escapeHtml(seg.text)}</span>`;
         body.appendChild(line);
       });
     } else {
-      const p = document.createElement("p");
-      p.textContent = text || "";
-      body.appendChild(p);
+      body.textContent = text || "";
     }
   }
-
   function formatTime(seconds) {
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
@@ -269,14 +391,68 @@
       ""
     );
     lines.push("## Decisions", ...(lastSummary.decisions || []).map((d) => `- ${d}`));
-    const md = lines.join("\n");
-    navigator.clipboard.writeText(md);
+    navigator.clipboard.writeText(lines.join("\n"));
+    flashCopied("export-md-btn", "📋 Copy as Markdown");
+  });
 
-    const btn = document.getElementById("export-md-btn");
-    const original = btn.textContent;
+  function flashCopied(id, original) {
+    const btn = document.getElementById(id);
     btn.textContent = "Copied!";
     setTimeout(() => (btn.textContent = original), 1500);
-  });
+  }
+
+  /* ---------- floating draggable badge ---------- */
+  function updateFloatingBadge(score) {
+    let badge = document.getElementById("floating-badge");
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.id = "floating-badge";
+      badge.className = "floating-badge";
+      document.body.appendChild(badge);
+      makeViewportDraggable(badge);
+    }
+    badge.textContent = score;
+  }
+  function makeViewportDraggable(el) {
+    let dragging = false, offsetX = 0, offsetY = 0;
+    const start = (x, y) => {
+      dragging = true;
+      const rect = el.getBoundingClientRect();
+      offsetX = x - rect.left;
+      offsetY = y - rect.top;
+      el.classList.add("dragging");
+    };
+    const move = (x, y) => {
+      if (!dragging) return;
+      el.style.left = x - offsetX + "px";
+      el.style.top = y - offsetY + "px";
+      el.style.right = "auto";
+      el.style.bottom = "auto";
+    };
+    const end = () => { dragging = false; el.classList.remove("dragging"); };
+    el.addEventListener("mousedown", (e) => start(e.clientX, e.clientY));
+    window.addEventListener("mousemove", (e) => move(e.clientX, e.clientY));
+    window.addEventListener("mouseup", end);
+    el.addEventListener("touchstart", (e) => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    window.addEventListener("touchmove", (e) => move(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    window.addEventListener("touchend", end);
+  }
+
+  /* ---------- reactive mood orb ---------- */
+  function updateMoodOrb(health) {
+    let orb = document.getElementById("mood-orb");
+    if (!orb) {
+      orb = document.createElement("div");
+      orb.id = "mood-orb";
+      orb.className = "mood-orb";
+      document.body.appendChild(orb);
+    }
+    const score = health.score;
+    const lightness = 45 + score * 0.15;
+    orb.style.background = `radial-gradient(circle at 35% 30%, hsl(330,90%,${lightness}%), hsl(280,80%,${Math.max(lightness - 20, 20)}%))`;
+    orb.style.animationDuration = 2.6 - (score / 100) * 1.8 + "s";
+    orb.title = health.label;
+  }
 
   /* ---------- health meter ---------- */
   function animateHealth(target, label) {
@@ -289,7 +465,6 @@
     let current = 0;
     const duration = 700;
     const start = performance.now();
-
     function step(now) {
       const progress = Math.min((now - start) / duration, 1);
       current = Math.round(progress * target);
@@ -304,7 +479,7 @@
 
   /* ---------- confetti ---------- */
   function confettiBurst() {
-    const colors = ["#10b981", "#38bdf8", "#facc15", "#f472b6"];
+    const colors = ["#EC4899", "#F472B6", "#C084FC", "#facc15"];
     for (let i = 0; i < 36; i++) {
       const el = document.createElement("div");
       el.className = "confetti-piece";

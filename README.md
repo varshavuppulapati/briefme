@@ -15,9 +15,17 @@ cd briefme
 python app.py
 ```
 
-That's it — no venv, no `pip install`, no `.env` to hand-edit first. The first run installs any missing dependencies automatically and asks for your OpenAI API key once ([get one here](https://platform.openai.com/api-keys)), then saves it to a local `.env` so you're never asked again.
+That's it — no venv, no `pip install`, no `.env` to hand-edit first. The first run installs any missing dependencies automatically and asks for a Groq API key once ([get a free one here](https://console.groq.com/keys), no card required), then saves it to a local `.env` so you're never asked again.
 
 Open http://localhost:5002, paste a transcript or upload an audio file, and hit **Summarize**.
+
+## Why Groq instead of OpenAI
+
+Groq's API is OpenAI-SDK-compatible (same `openai` Python package, just a different `base_url`) and hosts Whisper too, so both the transcription and summarization calls run on it. Its free tier is generous enough to run a public, anyone-can-try-it deployment without turning into a personal expense or an abuse target the way a real OpenAI key would.
+
+## Deploy your own
+
+This repo includes a `render.yaml`, so it deploys to [Render](https://render.com)'s free web service tier in a few clicks: New → Blueprint → point it at this repo → add your `GROQ_API_KEY` in the dashboard → deploy.
 
 ## Project structure
 
@@ -26,14 +34,15 @@ briefme/
 ├── app.py                    # Flask routes + startup bootstrap
 ├── core/
 │   ├── setup.py                # Auto-installs deps, prompts + saves API key on first run
-│   ├── llm.py                  # OpenAI client wrapper
+│   ├── llm.py                  # Groq (OpenAI-compatible) client wrapper
 │   ├── prompts.py              # Prompt templates
-│   ├── transcription.py        # Whisper audio transcription
+│   ├── transcription.py        # Whisper audio transcription (via Groq)
 │   └── summarizer.py           # Structured summary extraction
 ├── templates/index.html
 ├── static/style.css
 ├── tests/test_summarizer.py
 ├── requirements.txt
+├── render.yaml
 └── .env.example
 ```
 

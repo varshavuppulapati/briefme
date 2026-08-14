@@ -9,47 +9,52 @@
 <body>
 <header>
   <h1>BriefMe</h1>
-  <p>Paste a transcript or upload audio. Get a TL;DR, key points, action items, and decisions.</p>
+  <p>Paste a transcript, or drop in audio or video. Get a TL;DR, key points, action items, and decisions — instantly.</p>
 </header>
 
 <main>
-  <form method="post" action="/summarize" enctype="multipart/form-data">
-    <label for="transcript">Transcript</label>
-    <textarea id="transcript" name="transcript" rows="10" placeholder="Paste a meeting or lecture transcript here...">{{ transcript or '' }}</textarea>
+  <form id="summarize-form">
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="paste" role="tab">Paste transcript</button>
+      <button type="button" class="tab" data-tab="upload" role="tab">Upload audio/video</button>
+    </div>
 
-    <label for="audio">...or upload audio</label>
-    <input type="file" id="audio" name="audio" accept="audio/*">
+    <div class="tab-panel" data-panel="paste">
+      <textarea id="transcript" name="transcript" rows="10" placeholder="Paste a meeting or lecture transcript here..."></textarea>
+    </div>
 
-    <button type="submit">Summarize</button>
+    <div class="tab-panel hidden" data-panel="upload">
+      <label class="dropzone" id="dropzone" for="media_file">
+        <input type="file" id="media_file" name="media" accept="audio/*,video/*" hidden>
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M12 4l-5 5M12 4l5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        <span id="dropzone-text">Drag &amp; drop a recording, or click to browse</span>
+        <span class="dropzone-hint">Audio or video — mp3, wav, m4a, mp4, mov, and more</span>
+      </label>
+    </div>
+
+    <button type="submit" id="submit-btn">
+      <span class="btn-label">Summarize</span>
+      <span class="spinner hidden" aria-hidden="true"></span>
+    </button>
   </form>
 
-  {% if error %}
-  <div class="alert">{{ error }}</div>
-  {% endif %}
+  <div id="error" class="alert hidden"></div>
 
-  {% if summary %}
-  <section class="results">
+  <section id="results" class="results hidden">
     <h2>TL;DR</h2>
-    <p class="tldr">{{ summary.tldr }}</p>
+    <p class="tldr" id="tldr"></p>
 
     <h2>Key points</h2>
-    {% if summary.key_points %}
-    <ul>{% for p in summary.key_points %}<li>{{ p }}</li>{% endfor %}</ul>
-    {% else %}<p class="mut">None captured.</p>{% endif %}
+    <ul id="key-points"></ul>
 
     <h2>Action items</h2>
-    {% if summary.action_items %}
-    <ul class="actions">
-      {% for a in summary.action_items %}<li><b>{{ a.owner }}</b> — {{ a.task }}</li>{% endfor %}
-    </ul>
-    {% else %}<p class="mut">None mentioned.</p>{% endif %}
+    <ul class="actions" id="action-items"></ul>
 
     <h2>Decisions made</h2>
-    {% if summary.decisions %}
-    <ul>{% for d in summary.decisions %}<li>{{ d }}</li>{% endfor %}</ul>
-    {% else %}<p class="mut">None mentioned.</p>{% endif %}
+    <ul id="decisions"></ul>
   </section>
-  {% endif %}
 </main>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

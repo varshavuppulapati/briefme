@@ -13,12 +13,11 @@ from core.transcription import transcribe_audio  # noqa: E402
 
 app = Flask(__name__)
 
-# Whisper natively handles mp4/webm/mpeg as audio+video containers; mov/avi/mkv
-# are accepted best-effort (Groq will error clearly if a specific file can't
-# be decoded, which the app surfaces to the user).
+# Exactly what Groq's Whisper endpoint accepts - anything else is rejected
+# with a 400 before transcription even starts, so this list must stay in
+# sync with https://console.groq.com/docs/speech-to-text.
 ALLOWED_MEDIA_EXT = {
-    ".mp3", ".wav", ".m4a", ".webm", ".mpeg", ".mpga",  # audio
-    ".mp4", ".mov", ".avi", ".mkv",  # video
+    ".flac", ".mp3", ".mp4", ".mpeg", ".mpga", ".m4a", ".ogg", ".opus", ".wav", ".webm",
 }
 
 

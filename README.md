@@ -50,7 +50,7 @@ briefme/
 
 ## Supported files
 
-Audio: mp3, wav, m4a, webm, mpeg. Video: mp4, mov, avi, mkv — audio is extracted automatically.
+flac, mp3, mp4, mpeg, mpga, m4a, ogg, opus, wav, webm — the exact set Groq's Whisper endpoint accepts. `.mp4` and `.webm` cover most screen/video recordings; other video containers (`.mov`, `.avi`, `.mkv`) aren't supported and are rejected before upload.
 
 ## Tests
 

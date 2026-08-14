@@ -8,6 +8,7 @@
   const dropzone = document.getElementById("dropzone");
   const dropzoneText = document.getElementById("dropzone-text");
   const fileInput = document.getElementById("media_file");
+  const ALLOWED_EXT = [".flac", ".mp3", ".mp4", ".mpeg", ".mpga", ".m4a", ".ogg", ".opus", ".wav", ".webm"];
 
   /* ---------- tabs ---------- */
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -32,16 +33,28 @@
       dropzone.classList.remove("dragover");
     })
   );
+  function extOf(name) {
+    const i = name.lastIndexOf(".");
+    return i === -1 ? "" : name.slice(i).toLowerCase();
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    if (!ALLOWED_EXT.includes(extOf(file.name))) {
+      showError(`Unsupported file type "${extOf(file.name) || file.name}". Try: ${ALLOWED_EXT.join(", ")}`);
+      return;
+    }
+    errorBox.classList.add("hidden");
+    dropzoneText.textContent = file.name;
+  }
+
   dropzone.addEventListener("drop", (e) => {
-    const file = e.dataTransfer.files[0];
-    if (file) {
+    if (e.dataTransfer.files[0]) {
       fileInput.files = e.dataTransfer.files;
-      dropzoneText.textContent = file.name;
+      handleFile(e.dataTransfer.files[0]);
     }
   });
-  fileInput.addEventListener("change", () => {
-    if (fileInput.files[0]) dropzoneText.textContent = fileInput.files[0].name;
-  });
+  fileInput.addEventListener("change", () => handleFile(fileInput.files[0]));
 
   /* ---------- submit ---------- */
   form.addEventListener("submit", async (e) => {

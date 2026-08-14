@@ -7,16 +7,25 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+<div class="blobs" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span></div>
+
 <header>
-  <h1>BriefMe</h1>
-  <p>Paste a transcript, or drop in audio or video. Get a TL;DR, key points, action items, and decisions — instantly.</p>
+  <h1>🗒️ BriefMe</h1>
+  <p>Paste a transcript, drop in a recording, or record right here. Get a TL;DR, key points, action items, and decisions — instantly.</p>
 </header>
 
 <main>
+  <ol class="steps" id="steps">
+    <li class="step active" data-step="1"><span class="dot">1</span> Add your recording</li>
+    <li class="step" data-step="2"><span class="dot">2</span> Processing</li>
+    <li class="step" data-step="3"><span class="dot">3</span> Results</li>
+  </ol>
+
   <form id="summarize-form">
     <div class="tabs" role="tablist">
       <button type="button" class="tab active" data-tab="paste" role="tab">Paste transcript</button>
-      <button type="button" class="tab" data-tab="upload" role="tab">Upload audio/video</button>
+      <button type="button" class="tab" data-tab="upload" role="tab">Upload file</button>
+      <button type="button" class="tab" data-tab="record" role="tab">Record</button>
     </div>
 
     <div class="tab-panel" data-panel="paste">
@@ -32,6 +41,16 @@
       </label>
     </div>
 
+    <div class="tab-panel hidden" data-panel="record">
+      <div class="recorder">
+        <button type="button" id="record-btn" class="record-btn">
+          <span class="record-dot"></span> Start recording
+        </button>
+        <span id="record-time" class="record-time hidden">00:00</span>
+        <audio id="record-preview" class="hidden" controls></audio>
+      </div>
+    </div>
+
     <button type="submit" id="submit-btn">
       <span class="btn-label">Summarize</span>
       <span class="spinner hidden" aria-hidden="true"></span>
@@ -41,17 +60,44 @@
   <div id="error" class="alert hidden"></div>
 
   <section id="results" class="results hidden">
+    <div class="health-block">
+      <div class="meter">
+        <svg viewBox="0 0 120 120" width="110" height="110">
+          <circle cx="60" cy="60" r="52" class="meter-track"/>
+          <circle cx="60" cy="60" r="52" class="meter-fill" id="meter-fill"/>
+        </svg>
+        <div class="meter-value" id="health-value">0</div>
+      </div>
+      <div class="health-label" id="health-label"></div>
+    </div>
+
     <h2>TL;DR</h2>
     <p class="tldr" id="tldr"></p>
 
-    <h2>Key points</h2>
-    <ul id="key-points"></ul>
+    <div class="board">
+      <div class="col decisions">
+        <h3>✅ Decisions</h3>
+        <div id="decisions" class="col-body"></div>
+      </div>
+      <div class="col actions">
+        <h3>📋 Action items</h3>
+        <div id="action-items" class="col-body"></div>
+      </div>
+      <div class="col points">
+        <h3>💡 Key points</h3>
+        <div id="key-points" class="col-body"></div>
+      </div>
+    </div>
 
-    <h2>Action items</h2>
-    <ul class="actions" id="action-items"></ul>
+    <div class="action-row">
+      <button type="button" id="export-md-btn" class="secondary">📋 Copy as Markdown</button>
+      <button type="button" id="toggle-transcript-btn" class="secondary">📝 Show full transcript</button>
+    </div>
 
-    <h2>Decisions made</h2>
-    <ul id="decisions"></ul>
+    <div id="transcript-panel" class="transcript-panel hidden">
+      <audio id="player" class="hidden" controls></audio>
+      <div id="transcript-body" class="transcript-body"></div>
+    </div>
   </section>
 </main>
 

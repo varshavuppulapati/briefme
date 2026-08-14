@@ -32,6 +32,7 @@ def api_summarize():
     media_file = request.files.get("media")
 
     used_transcript = transcript_text
+    segments = []
 
     try:
         if media_file and media_file.filename:
@@ -42,7 +43,7 @@ def api_summarize():
                 media_file.save(tmp.name)
                 tmp_path = tmp.name
             try:
-                used_transcript = transcribe_audio(tmp_path)
+                used_transcript, segments = transcribe_audio(tmp_path)
             finally:
                 os.unlink(tmp_path)
 
@@ -55,7 +56,7 @@ def api_summarize():
     except Exception as e:
         return jsonify(error=f"Something went wrong: {e}"), 500
 
-    return jsonify(summary=summary, transcript=used_transcript)
+    return jsonify(summary=summary, transcript=used_transcript, segments=segments)
 
 
 if __name__ == "__main__":

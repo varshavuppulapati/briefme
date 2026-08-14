@@ -4,7 +4,7 @@ Paste a transcript or upload an audio file, and BriefMe turns it into structured
 
 ## How it works
 
-1. **Transcribe** (optional) — if you upload audio instead of pasting text, OpenAI's Whisper API transcribes it first.
+1. **Transcribe** (optional) — if you upload audio instead of pasting text, Groq's hosted Whisper API transcribes it first.
 2. **Summarize** — a single structured-output LLM call extracts a TL;DR, key points, action items, and decisions as JSON, with an explicit instruction not to invent action items or decisions that weren't actually mentioned.
 
 ## Setup
@@ -57,7 +57,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-Tests mock the OpenAI call, so they run without an API key.
+Tests mock the model call, so they run without an API key.
 
 ## License
 

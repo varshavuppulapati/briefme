@@ -21,6 +21,15 @@ ALLOWED_MEDIA_EXT = {
 }
 
 
+@app.errorhandler(Exception)
+def handle_uncaught_error(e):
+    """Guarantees /api/* always returns JSON, even on a bug we didn't anticipate -
+    otherwise Flask's default HTML error page breaks the frontend's res.json()."""
+    if request.path.startswith("/api/"):
+        return jsonify(error=f"Unexpected server error: {e}"), 500
+    raise e
+
+
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
